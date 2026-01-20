@@ -14,6 +14,7 @@ use openmls_rust_crypto::OpenMlsRustCrypto;
 use openmls_traits::{types::Ciphersuite, OpenMlsProvider};
 use tls_codec::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
+use openmls_memory_storage::MemoryStorage;
 
 #[wasm_bindgen]
 extern "C" {
@@ -50,6 +51,25 @@ impl Provider {
     pub fn new() -> Self {
         Self::default()
     }
+
+    /// Create a new Provider from serialized storage bytes (for JS backup/restore)
+    #[wasm_bindgen]
+    pub fn new_from_storage(bytes: &[u8]) -> Result<Provider, JsError> {
+        let mut slice = bytes;
+        let storage = MemoryStorage::deserialize(&mut slice)
+            .map_err(|e| JsError::new(&format!("Provider from_storage error: {e}")))?;
+        Ok(Provider(OpenMlsRustCrypto::with_storage(storage)))
+    }
+    
+    /// Export the internal memory storage as bytes (for JS backup/restore)
+    #[wasm_bindgen]
+    pub fn export_storage(&self) -> Vec<u8> {
+        let storage = self.0.storage();
+        let mut buf = Vec::new();
+        let _ = storage.serialize(&mut buf);
+        buf
+    }
+
 }
 
 #[wasm_bindgen]
@@ -83,6 +103,41 @@ impl Identity {
             credential_with_key,
             keypair,
         })
+    }
+
+    /// Restore an Identity from a Provider's storage using the public key bytes.
+    /// This should be used when loading from persisted storage instead of creating a new Identity.
+    /// The public_key parameter should be the public key bytes that were saved when the Identity was created.
+    /// Returns an error if no keypair is found in storage for this public key.
+    #[wasm_bindgen]
+    pub fn from_provider(provider: &Provider, name: &str, public_key: &[u8]) -> Result<Identity, JsError> {
+        let signature_scheme = SignatureScheme::ED25519;
+        let identity = name.bytes().collect();
+        let credential = BasicCredential::new(identity);
+
+        // Read the keypair from storage using the public key
+        let keypair = SignatureKeyPair::read(provider.0.storage(), public_key, signature_scheme)
+            .ok_or_else(|| JsError::new(&format!(
+                "No keypair found in storage for public key. \
+                 Make sure the Provider was restored from storage that contains this identity's keypair."
+            )))?;
+
+        let credential_with_key = CredentialWithKey {
+            credential: credential.into(),
+            signature_key: keypair.public().into(),
+        };
+
+        Ok(Identity {
+            credential_with_key,
+            keypair,
+        })
+    }
+
+    /// Get the public key bytes for this Identity.
+    /// This should be saved alongside the Provider storage so it can be used to restore the Identity later.
+    #[wasm_bindgen]
+    pub fn public_key(&self) -> Vec<u8> {
+        self.keypair.public().to_vec()
     }
 
     pub fn key_package(&self, provider: &Provider) -> KeyPackage {

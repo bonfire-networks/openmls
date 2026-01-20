@@ -20,6 +20,7 @@ openmls = { path = "../openmls", features = ["js"] }
 openmls_traits = { path = "../traits" }
 openmls_rust_crypto = { path = "../openmls_rust_crypto" }
 openmls_basic_credential = { path = "../basic_credential" }
+openmls_memory_storage = { path = "../memory_storage", features = ["js"] }
 tls_codec = { workspace = true }
 
 

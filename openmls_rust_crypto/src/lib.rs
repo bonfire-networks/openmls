@@ -18,6 +18,16 @@ pub struct OpenMlsRustCrypto {
     key_store: MemoryStorage,
 }
 
+impl OpenMlsRustCrypto {
+    /// Create a new OpenMlsRustCrypto with a custom MemoryStorage.
+    pub fn with_storage(storage: MemoryStorage) -> Self {
+        Self {
+            crypto: RustCrypto::default(),
+            key_store: storage,
+        }
+    }
+}
+
 impl OpenMlsProvider for OpenMlsRustCrypto {
     type CryptoProvider = RustCrypto;
     type RandProvider = RustCrypto;

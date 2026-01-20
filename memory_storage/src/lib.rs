@@ -1,6 +1,7 @@
 use openmls_traits::storage::*;
 use serde::Serialize;
 use std::{collections::HashMap, sync::RwLock};
+use std::io::Write;
 
 #[cfg(feature = "test-utils")]
 use std::io::Write as _;
@@ -29,7 +30,7 @@ impl Clone for MemoryStorage {
 }
 
 // For testing (KATs in particular) we want to serialize and deserialize the storage
-#[cfg(feature = "test-utils")]
+#[cfg(any(feature = "test-utils", feature = "js"))]
 impl MemoryStorage {
     pub fn serialize(&self, w: &mut Vec<u8>) -> std::io::Result<usize> {
         let values = self.values.read().unwrap();
