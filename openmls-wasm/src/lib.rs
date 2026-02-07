@@ -228,6 +228,18 @@ impl Group {
         Ok(Group { mls_group })
     }
 
+    /// Load a group from the provider's storage.
+    /// Returns None if no group with the given ID exists in storage.
+    /// This allows groups to persist across page reloads.
+    pub fn load(provider: &Provider, group_id: &[u8]) -> Result<Option<Group>, JsError> {
+        let group_id_bytes = GroupId::from_slice(group_id);
+        match MlsGroup::load(provider.0.storage(), &group_id_bytes) {
+            Ok(Some(mls_group)) => Ok(Some(Group { mls_group })),
+            Ok(None) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
     pub fn export_ratchet_tree(&self) -> RatchetTree {
         RatchetTree(self.mls_group.export_ratchet_tree().into())
     }
