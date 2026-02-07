@@ -388,7 +388,7 @@ impl TreeSync {
         credential_with_key: CredentialWithKey,
         life_time: Lifetime,
         capabilities: Capabilities,
-        extensions: Extensions,
+        extensions: Extensions<LeafNode>,
     ) -> Result<(Self, CommitSecret, EncryptionKeyPair), LibraryError> {
         let new_leaf_node_params = NewLeafNodeParams {
             ciphersuite,
@@ -419,6 +419,11 @@ impl TreeSync {
         tree_sync.populate_parent_hashes(provider.crypto(), ciphersuite)?;
 
         Ok((tree_sync, commit_secret, encryption_key_pair))
+    }
+
+    /// Return the full tree
+    pub(crate) fn tree(&self) -> &MlsBinaryTree<TreeSyncLeafNode, TreeSyncParentNode> {
+        &self.tree
     }
 
     /// Return the tree hash of the root node of the tree.
@@ -591,7 +596,7 @@ impl TreeSync {
     ///
     /// XXX: For performance reasons we probably want to have this in a borrowing
     ///      version as well. But it might well go away again.
-    pub(crate) fn full_leave_members(&self) -> impl Iterator<Item = Member> + '_ {
+    pub(crate) fn full_leaf_members(&self) -> impl Iterator<Item = Member> + '_ {
         self.tree
             .leaves()
             // Filter out blank nodes
